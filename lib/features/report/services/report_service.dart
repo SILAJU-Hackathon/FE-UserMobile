@@ -22,8 +22,7 @@ class ReportService {
       });
 
       final response = await _dioClient.dio.post(
-        ApiEndpoints.baseUrl +
-            '/api/reports', // TODO: Update endpoint when ready
+        ApiEndpoints.baseUrl + '/api/user/report',
         data: formData,
         options: Options(
           contentType: 'multipart/form-data',

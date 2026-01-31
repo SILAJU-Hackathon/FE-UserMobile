@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:geolocator/geolocator.dart' as geo;
 import 'package:http/http.dart' as http;
 import 'package:silaju/core/constants/app_colors.dart';
 import 'package:silaju/core/constants/app_strings.dart';
@@ -38,8 +38,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
   List<dynamic> _searchResults = [];
   bool _isSnapping = false;
   LatLng? _userInitialLocation; // Cached user location for speed
-  bool _isMovingProgrammatically = false; // Flag to prevent event loops
-  AnimationController? _mapAnimationController;
+  late final AnimationController _mapAnimationController;
   bool _skipNextSnap = false; // Prevent snapping after search selection
 
   // Form controllers
@@ -53,6 +52,11 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
   @override
   void initState() {
     super.initState();
+    // Initialize animation controller once
+    _mapAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
     _getCurrentLocation();
   }
 
@@ -62,19 +66,20 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     _locationController.dispose();
     _searchController.dispose();
     _mapController.dispose();
-    _mapAnimationController?.dispose();
+    _mapAnimationController.dispose();
     _debounce?.cancel();
     super.dispose();
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom,
       {Duration duration = const Duration(milliseconds: 1000)}) {
-    // Stop any current animation and reset flag to be safe
-    _mapAnimationController?.stop();
-    _mapAnimationController?.dispose();
-    _isMovingProgrammatically = false;
+    // Stop any running animation
+    if (_mapAnimationController.isAnimating) {
+      _mapAnimationController.stop();
+    }
+    _mapAnimationController.reset();
+    _mapAnimationController.duration = duration;
 
-    _isMovingProgrammatically = true;
     final latTween = Tween<double>(
         begin: _mapController.camera.center.latitude,
         end: destLocation.latitude);
@@ -84,31 +89,22 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     final zoomTween =
         Tween<double>(begin: _mapController.camera.zoom, end: destZoom);
 
-    _mapAnimationController =
-        AnimationController(duration: duration, vsync: this);
     final Animation<double> animation = CurvedAnimation(
-        parent: _mapAnimationController!, curve: Curves.fastOutSlowIn);
+        parent: _mapAnimationController, curve: Curves.fastOutSlowIn);
 
-    _mapAnimationController!.addListener(() {
+    final listener = () {
       _mapController.move(
           LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
           zoomTween.evaluate(animation));
-    });
+    };
 
-    animation.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _isMovingProgrammatically = false;
-        // Small delay to ensure any remaining move events are processed/ignored
-        Future.delayed(const Duration(milliseconds: 50), () {
-          if (mounted) _onMapMoveEnd(_mapController.camera);
-        });
-      } else if (status == AnimationStatus.dismissed ||
-          status == AnimationStatus.completed) {
-        _isMovingProgrammatically = false;
-      }
-    });
+    _mapAnimationController.addListener(listener);
 
-    _mapAnimationController!.forward();
+    _mapAnimationController.forward().then((_) {
+      _mapAnimationController.removeListener(listener);
+      // Ensure we reverse geocode or snap at the end
+      _onMapMoveEnd(_mapController.camera);
+    });
   }
 
   /// Snap coordinates to the nearest road using OSRM API
@@ -204,32 +200,37 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     setState(() => _isLoadingLocation = true);
     try {
       // 1. Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      bool serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _locationController.text = 'GPS tidak aktif. Silakan aktifkan.';
         return;
       }
 
       // 2. Check/Request permissions
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+      geo.LocationPermission permission =
+          await geo.Geolocator.checkPermission();
+      if (permission == geo.LocationPermission.denied) {
+        permission = await geo.Geolocator.requestPermission();
       }
 
-      if (permission == LocationPermission.denied) {
+      if (permission == geo.LocationPermission.denied) {
         _locationController.text = 'Izin lokasi ditolak';
         return;
       }
 
-      if (permission == LocationPermission.deniedForever) {
+      if (permission == geo.LocationPermission.deniedForever) {
         _locationController.text =
             'Izin lokasi ditolak permanen. Cek pengaturan.';
         return;
       }
 
+      // Add a small delay for platform initialization safety
+      await Future.delayed(const Duration(milliseconds: 500));
+
       // 3. Get position
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+      final position = await geo.Geolocator.getCurrentPosition(
+        desiredAccuracy: geo.LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
 
       final location = LatLng(position.latitude, position.longitude);
@@ -254,7 +255,11 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
       await _reverseGeocode(_selectedLocation);
     } catch (e) {
       print('Error getting location: $e');
-      _locationController.text = 'Gagal mengambil GPS';
+      if (e.toString().contains('TimeoutException')) {
+        _locationController.text = 'GPS Timeout. Coba lagi di ruang terbuka.';
+      } else {
+        _locationController.text = 'Gagal mengambil GPS: $e';
+      }
     } finally {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
@@ -303,8 +308,8 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
 
   /// When user stops dragging the map
   void _onMapMoveEnd(MapCamera camera) async {
-    // Only block if we are in the middle of a programmatic animation
-    if (_isMovingProgrammatically) return;
+    // If animating, don't interfere yet
+    if (_mapAnimationController.isAnimating) return;
 
     final currentCenter = camera.center;
 
@@ -320,19 +325,19 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
       if (latDiff > 0.000001 || lonDiff > 0.000001) {
         _isSnapping = true;
 
-        // Update state locally first
         setState(() {
           _selectedLocation = snappedLocation;
         });
 
-        // Use a faster animation for snapping
         if (mounted) {
+          // Use raw move for small snaps to avoid loops, or very short animation
+          // Using short animation for smoothness
           _animatedMapMove(snappedLocation, camera.zoom,
               duration: const Duration(milliseconds: 300));
         }
 
-        // Delay to allow animation to settle
-        await Future.delayed(const Duration(milliseconds: 400));
+        // Delay to allow animation to start/finish
+        await Future.delayed(const Duration(milliseconds: 350));
         _isSnapping = false;
         return;
       }
@@ -839,12 +844,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
                 options: MapOptions(
                   initialCenter: _selectedLocation,
                   initialZoom: 17,
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                  ),
                   onMapEvent: (event) {
                     if (event is MapEventMoveEnd &&
-                        !_isMovingProgrammatically) {
+                        !_mapAnimationController.isAnimating) {
                       _onMapMoveEnd(_mapController.camera);
                     }
                   },
