@@ -1,15 +1,17 @@
-# silaju
+# SILAJU - User Mobile App (FE-UserMobile)
 
-A new Flutter project.
+The frontend mobile application for the SILAJU project, built with Flutter.
+
+## Features implemented in this branch:
+- Initial project setup
+- Authentication flow (Google Sign-In ready)
+- Home Screen dashboard with levels and stats
+- Road damage report submission UI with map selection
+- Professional theme and design
 
 ## Getting Started
 
 This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
