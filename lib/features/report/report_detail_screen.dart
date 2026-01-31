@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:silaju/core/constants/app_colors.dart';
 import 'package:silaju/core/constants/app_sizes.dart';
+import 'package:silaju/core/constants/app_strings.dart';
 
 /// Report detail screen with status timeline
 class ReportDetailScreen extends StatelessWidget {
@@ -54,7 +55,7 @@ class ReportDetailScreen extends StatelessWidget {
                         Icon(Icons.build, size: 14, color: AppColors.white),
                         SizedBox(width: 4),
                         Text(
-                          'Diproses',
+                          AppStrings.statusProcessDisplayName,
                           style: TextStyle(
                             color: AppColors.white,
                             fontSize: 12,
@@ -192,27 +193,27 @@ class ReportDetailScreen extends StatelessWidget {
       children: [
         _buildTimelineItem(
           icon: Icons.send,
-          title: 'Laporan Dikirim',
+          title: AppStrings.statusPendingDisplayName,
           subtitle: '25 Dec 2024, 10:30 WIB',
           isCompleted: true,
           isFirst: true,
         ),
         _buildTimelineItem(
           icon: Icons.verified,
-          title: 'Diverifikasi Admin',
+          title: AppStrings.statusVerifiedDisplayName,
           subtitle: '25 Dec 2024, 14:00 WIB',
           isCompleted: true,
         ),
         _buildTimelineItem(
           icon: Icons.build,
-          title: 'Sedang Dikerjakan',
+          title: AppStrings.statusProcessDisplayName,
           subtitle: 'Tim perbaikan sedang di lokasi',
           isActive: true,
           message: 'Tim sudah sampai di lokasi dan mulai melakukan penambalan.',
         ),
         _buildTimelineItem(
           icon: Icons.check_circle,
-          title: 'Selesai',
+          title: AppStrings.statusDoneDisplayName,
           subtitle: 'Pending',
           isLast: true,
         ),

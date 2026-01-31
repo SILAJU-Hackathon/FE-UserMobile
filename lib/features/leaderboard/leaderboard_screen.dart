@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:silaju/core/constants/app_colors.dart';
 import 'package:silaju/core/constants/app_strings.dart';
 import 'package:silaju/core/constants/app_sizes.dart';
+import 'package:silaju/features/auth/providers/auth_provider.dart';
 
 /// Leaderboard screen with top 3 podium
-class LeaderboardScreen extends StatefulWidget {
+class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
 
   @override
-  State<LeaderboardScreen> createState() => _LeaderboardScreenState();
+  ConsumerState<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen> {
+class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   String _selectedFilter = 'Bulan Ini';
 
   final List<Map<String, dynamic>> _topThree = [
@@ -196,6 +199,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildUserPositionCard() {
+    final user = ref.watch(authProvider).user;
+
     return Container(
       padding: const EdgeInsets.all(AppSizes.md),
       decoration: BoxDecoration(
@@ -225,16 +230,40 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ),
           const SizedBox(width: AppSizes.md),
 
+          // Avatar (Added)
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: (user?.avatar != null && user!.avatar!.isNotEmpty)
+                ? CachedNetworkImage(
+                    imageUrl: user!.avatar!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) =>
+                        const Icon(Icons.person, color: AppColors.primaryBlue),
+                    errorWidget: (context, url, error) =>
+                        const Icon(Icons.person, color: AppColors.primaryBlue),
+                  )
+                : const Icon(Icons.person, color: AppColors.primaryBlue),
+          ),
+          const SizedBox(width: AppSizes.md),
+
           // User info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  AppStrings.yourPosition,
-                  style: TextStyle(
+                Text(
+                  user?.fullname ?? AppStrings.yourPosition,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Row(
                   children: [
@@ -273,7 +302,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               ),
               Text(
                 '50 poin ke #14',
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary,
                 ),

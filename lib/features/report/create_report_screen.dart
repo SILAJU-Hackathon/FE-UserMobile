@@ -455,10 +455,15 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
 
               // Content
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(AppSizes.md),
-                  child: _buildStepContent(),
-                ),
+                child: _currentStep == 0
+                    ? Padding(
+                        padding: const EdgeInsets.all(AppSizes.md),
+                        child: _buildStepContent(),
+                      )
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.all(AppSizes.md),
+                        child: _buildStepContent(),
+                      ),
               ),
 
               // Bottom button
@@ -476,34 +481,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
                 ),
                 child: Column(
                   children: [
-                    // XP hint
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSizes.md,
-                        vertical: AppSizes.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.xpGold.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppSizes.radiusSm),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.bolt, color: AppColors.xpGold, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            AppStrings.xpHint,
-                            style: TextStyle(
-                              color: AppColors.xpGold,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.md),
-
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -561,114 +538,87 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          AppStrings.takePhoto,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: AppSizes.sm),
-        Text(
-          AppStrings.photoSubtitle,
-          style: TextStyle(
-            color: AppColors.textSecondary,
+        // Title Section
+        const Center(
+          child: Text(
+            'Lapor Kerusakan',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
         ),
         const SizedBox(height: AppSizes.lg),
 
-        // Photo placeholder
-        GestureDetector(
-          onTap: () => _pickImage(ImageSource.camera),
+        // Hero Image / Placeholder
+        Expanded(
           child: Container(
             width: double.infinity,
-            height: 250,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppColors.mintGreen.withOpacity(0.3),
-                  AppColors.mintGreen.withOpacity(0.1),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-              border: Border.all(
-                color: AppColors.mintGreen,
-                width: 2,
-                style: BorderStyle.solid,
-              ),
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(24),
+              image: _imageFile != null
+                  ? DecorationImage(
+                      image: FileImage(_imageFile!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: _imageFile != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusLg - 2),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.file(
-                          _imageFile!,
-                          fit: BoxFit.cover,
-                        ),
-                        Positioned(
-                          top: AppSizes.md,
-                          right: AppSizes.md,
-                          child: ElevatedButton.icon(
-                            onPressed: () => _pickImage(ImageSource.camera),
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text(AppStrings.changePhoto),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.white,
-                              foregroundColor: AppColors.textPrimary,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : Column(
+            child: _imageFile == null
+                ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: AppColors.mintGreen.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.add_a_photo,
-                          size: 32,
-                          color: AppColors.success,
-                        ),
-                      ),
-                      const SizedBox(height: AppSizes.md),
-                      const Text(
-                        AppStrings.tapToTakePhoto,
+                      Icon(Icons.camera_alt_outlined,
+                          size: 64, color: Colors.grey[400]),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Foto Kerusakan',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textSecondary,
+                          color: Colors.grey[600],
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: AppSizes.sm),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          AppStrings.required,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.error,
-                            fontWeight: FontWeight.w600,
+                    ],
+                  )
+                : Stack(
+                    children: [
+                      Positioned(
+                        bottom: 16,
+                        right: 16,
+                        child: GestureDetector(
+                          onTap: () => _pickImage(ImageSource.camera),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.cached,
+                                    size: 18, color: AppColors.primary),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Ganti Foto',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -676,68 +626,125 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
                   ),
           ),
         ),
-        const SizedBox(height: AppSizes.md),
+        const SizedBox(height: AppSizes.lg),
 
-        // Action buttons
+        // Action Buttons Row (Camera & Gallery)
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _pickImage(ImageSource.camera),
-                icon: const Icon(Icons.camera_alt),
-                label: const Text(AppStrings.camera),
+              child: _buildActionButton(
+                icon: Icons.camera_alt,
+                label: _imageFile == null ? 'Ambil Foto' : 'Ambil Ulang',
+                onTap: () => _pickImage(ImageSource.camera),
+                color: Colors.white,
+                iconColor: AppColors.primary,
               ),
             ),
-            const SizedBox(width: AppSizes.md),
+            const SizedBox(width: 16),
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () => _pickImage(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library),
-                label: const Text(AppStrings.gallery),
+              child: _buildActionButton(
+                icon: Icons.photo_library,
+                label: 'Galeri',
+                onTap: () => _pickImage(ImageSource.gallery),
+                color: Colors.white,
+                iconColor: AppColors.primary,
               ),
             ),
           ],
         ),
         const SizedBox(height: AppSizes.lg),
 
-        // Tips card
+        // Tips Foto Card
         Container(
-          padding: const EdgeInsets.all(AppSizes.md),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.infoLight,
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('💡', style: TextStyle(fontSize: 20)),
-              const SizedBox(width: AppSizes.md),
+              const Icon(Icons.lightbulb_outline,
+                  color: Colors.amber, size: 28),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      AppStrings.photoTipsTitle,
+                      'Tips Foto',
                       style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      AppStrings.photoTips,
+                      'Pastikan lubang dan lokasi sekitar terlihat jelas agar laporan valid.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: Colors.grey[600],
+                        height: 1.5,
                       ),
                     ),
                   ],
                 ),
               ),
+              // Optional: You could add a small illustration image here if available
             ],
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? color,
+    Color? iconColor,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: color ?? Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 28, color: iconColor ?? AppColors.primary),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

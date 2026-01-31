@@ -34,4 +34,26 @@ class ReportService {
       throw Exception('Gagal mengirim laporan: $e');
     }
   }
+
+  Future<List<Report>> getUserReports({int page = 1, int limit = 10}) async {
+    try {
+      final response = await _dioClient.dio.get(
+        ApiEndpoints.baseUrl + '/api/user/report/me',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'] ?? response.data;
+        return ReportResponse.fromJson(data).reports;
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching user reports: $e');
+      return [];
+    }
+  }
 }

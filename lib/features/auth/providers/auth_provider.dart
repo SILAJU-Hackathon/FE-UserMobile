@@ -12,12 +12,14 @@ class AuthState {
   final String? token;
   final bool isLoading;
   final String? error;
+  final UserData? user;
 
   AuthState({
     this.isAuthenticated = false,
     this.token,
     this.isLoading = false,
     this.error,
+    this.user,
   });
 
   AuthState copyWith({
@@ -25,12 +27,14 @@ class AuthState {
     String? token,
     bool? isLoading,
     String? error,
+    UserData? user,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
       token: token ?? this.token,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      user: user ?? this.user,
     );
   }
 }
@@ -56,6 +60,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: true,
         token: token,
       );
+      // Fetch profile in background
+      fetchProfile();
     }
   }
 
@@ -73,6 +79,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
       // Set token in Dio client
       _dioClient.setAuthToken(response.token);
+
+      // Fetch profile
+      await fetchProfile();
 
       state = state.copyWith(
         isAuthenticated: true,
@@ -161,6 +170,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isAuthenticated: true,
         token: response.token,
         isLoading: false,
+        user: response.user,
       );
       print('DEBUG: AuthNotifier state updated. Success!');
     } catch (e) {
@@ -169,6 +179,30 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
         error: e.toString().replaceAll('Exception: ', ''),
       );
+      rethrow;
+    }
+  }
+
+  /// Fetch user profile
+  Future<void> fetchProfile() async {
+    try {
+      final user = await _authService.getProfile();
+      state = state.copyWith(user: user);
+    } catch (e) {
+      print('Error fetching profile: $e');
+    }
+  }
+
+  /// Upload avatar
+  Future<void> uploadAvatar(String filePath) async {
+    try {
+      final newAvatarUrl = await _authService.updateAvatar(filePath);
+      if (state.user != null) {
+        state = state.copyWith(
+          user: state.user!.copyWith(avatar: newAvatarUrl),
+        );
+      }
+    } catch (e) {
       rethrow;
     }
   }

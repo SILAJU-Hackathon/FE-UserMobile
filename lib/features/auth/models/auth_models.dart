@@ -119,11 +119,15 @@ class UserData {
   final String email;
   final String fullname;
   final bool isNewUser;
+  final String? avatar;
+  final String? createdAt;
 
   UserData({
     required this.email,
     required this.fullname,
     this.isNewUser = false,
+    this.avatar,
+    this.createdAt,
   });
 
   factory UserData.fromJson(Map<String, dynamic> json) {
@@ -131,6 +135,24 @@ class UserData {
       email: json['email'] as String? ?? '',
       fullname: json['fullname'] as String? ?? json['name'] as String? ?? '',
       isNewUser: json['isNewUser'] as bool? ?? false,
+      avatar: json['avatar'] as String?,
+      createdAt: json['createdAt'] as String?,
+    );
+  }
+
+  UserData copyWith({
+    String? email,
+    String? fullname,
+    bool? isNewUser,
+    String? avatar,
+    String? createdAt,
+  }) {
+    return UserData(
+      email: email ?? this.email,
+      fullname: fullname ?? this.fullname,
+      isNewUser: isNewUser ?? this.isNewUser,
+      avatar: avatar ?? this.avatar,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

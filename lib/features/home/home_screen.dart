@@ -1,63 +1,95 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:silaju/core/constants/app_colors.dart';
 import 'package:silaju/core/constants/app_strings.dart';
 import 'package:silaju/core/constants/app_sizes.dart';
 import 'package:silaju/core/router/app_router.dart';
+import 'package:silaju/features/auth/providers/auth_provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:silaju/features/report/providers/report_provider.dart';
+import 'package:silaju/features/report/utils/report_status_helper.dart';
 
 /// Home screen with dashboard, stats, and recent reports
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch reports when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(reportProvider.notifier).fetchUserReports();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = ref.watch(authProvider).user;
+    final reportState = ref.watch(reportProvider);
+    final recentReports = reportState.userReports.take(3).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC), // Light gray background
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              // Header
-              _buildHeader(),
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(reportProvider.notifier).fetchUserReports(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              children: [
+                // Header
+                _buildHeader(user),
 
-              const SizedBox(height: AppSizes.md),
+                const SizedBox(height: AppSizes.md),
 
-              // Stats Card
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-                child: _buildStatsCard(),
-              ),
+                // Stats Card
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+                  child: _buildStatsCard(),
+                ),
 
-              const SizedBox(height: AppSizes.xl),
+                const SizedBox(height: AppSizes.xl),
 
-              // Quick Stats Row
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-                child: _buildQuickStats(),
-              ),
+                // Quick Stats Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+                  child: _buildQuickStats(),
+                ),
 
-              const SizedBox(height: AppSizes.xl),
+                const SizedBox(height: AppSizes.xl),
 
-              // Report Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-                child: _buildReportButton(context),
-              ),
+                // Report Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+                  child: _buildReportButton(context),
+                ),
 
-              const SizedBox(height: AppSizes.xl),
+                const SizedBox(height: AppSizes.xl),
 
-              // Recent Reports
-              _buildRecentReports(context),
+                // Recent Reports
+                _buildRecentReports(context, recentReports),
 
-              const SizedBox(height: 100), // Bottom padding for FAB/Nav
-            ],
+                const SizedBox(height: 100), // Bottom padding for FAB/Nav
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(dynamic user) {
+    // Assuming user is UserData type, but passed as dynamic or var to avoid import issues if not explicit
+    // Using user?.fullname etc.
+    final name = user?.fullname ?? 'Pengguna';
+    final avatarUrl = user?.avatar;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(
           AppSizes.md, AppSizes.md, AppSizes.md, AppSizes.sm),
@@ -71,14 +103,22 @@ class HomeScreen extends StatelessWidget {
                 height: 50,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: AssetImage('assets/images/avatar_placeholder.png'),
-                    fit: BoxFit.cover,
-                  ),
                   color: Color(0xFFD1E4FA), // Fallback color
                 ),
-                child: const Icon(Icons.person,
-                    color: AppColors.primaryBlue), // Fallback icon
+                child: ClipOval(
+                  child: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? CachedNetworkImage(
+                          imageUrl: avatarUrl,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => const Icon(
+                              Icons.person,
+                              color: AppColors.primaryBlue),
+                          errorWidget: (context, url, error) => const Icon(
+                              Icons.person,
+                              color: AppColors.primaryBlue),
+                        )
+                      : const Icon(Icons.person, color: AppColors.primaryBlue),
+                ),
               ),
               Positioned(
                 bottom: 0,
@@ -111,14 +151,16 @@ class HomeScreen extends StatelessWidget {
                     height: 1.2,
                   ),
                 ),
-                const Text(
-                  'Halo, Ahmad!',
-                  style: TextStyle(
+                Text(
+                  'Halo, $name!',
+                  style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
                     height: 1.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -444,7 +486,25 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentReports(BuildContext context) {
+  Widget _buildRecentReports(BuildContext context, List<dynamic> reports) {
+    if (reports.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Center(
+            child:
+                Text('Belum ada laporan', style: TextStyle(color: Colors.grey)),
+          ),
+        ),
+      );
+    }
+
     return Column(
       children: [
         Padding(
@@ -479,54 +539,55 @@ class HomeScreen extends StatelessWidget {
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: 3,
+          itemCount: reports.length,
           padding: EdgeInsets.zero,
           itemBuilder: (context, index) {
-            return _buildReportCard(context, index);
+            return _buildReportCard(context, reports[index]);
           },
         ),
       ],
     );
   }
 
-  Widget _buildReportCard(BuildContext context, int index) {
-    final reports = [
-      {
-        'title': 'Jl. Raya Darmo',
-        'desc': 'Lubang besar di tengah jalan men...',
-        'time': '2 jam lalu',
-        'status': 'Terverifikasi',
-        'statusColor': const Color(0xFF10B981), // Green
-        'statusBg': const Color(0xFFD1FAE5),
-        'image': 'assets/images/road1.jpg', // Placeholder
-        'icon': Icons.check_circle,
-      },
-      {
-        'title': 'Jl. Diponegoro',
-        'desc': 'Retakan panjang di trotoar...',
-        'time': '5 jam lalu',
-        'status': 'Pending',
-        'statusColor': const Color(0xFFF59E0B), // Yellow
-        'statusBg': const Color(0xFFFEF3C7),
-        'image': 'assets/images/road2.jpg',
-        'icon': Icons.pending,
-      },
-      {
-        'title': 'Jl. Ahmad Yani',
-        'desc': 'Marka jalan sudah pudar dan tidak...',
-        'time': '1 hari lalu',
-        'status': 'Proses',
-        'statusColor': const Color(0xFF3B82F6), // Blue
-        'statusBg': const Color(0xFFDBEAFE),
-        'image': 'assets/images/road3.jpg',
-        'icon': Icons.trending_up,
-      },
-    ];
+  Widget _buildReportCard(BuildContext context, dynamic report) {
+    // Dynamic because report might be Map or Report object.
+    // Assuming Report object based on new flow, but handling gracefully.
 
-    final report = reports[index];
+    final title = report is Map ? report['title'] : report.roadName;
+    final desc = report is Map ? report['desc'] : report.description;
+    final time =
+        report is Map ? report['time'] : report.createdAt; // Format time later
+    final rawStatus = report is Map ? report['status'] : report.status;
+    final image = report is Map ? report['image'] : report.beforeImageUrl;
+
+    Color statusColor = ReportStatusHelper.getStatusColor(rawStatus.toString());
+    Color statusBg =
+        ReportStatusHelper.getStatusBackgroundColor(rawStatus.toString());
+    String statusDisplay =
+        ReportStatusHelper.getDisplayStatus(rawStatus.toString());
+
+    // Date formatting
+    String timeAgo = 'Baru saja';
+    if (time is String && time.isNotEmpty) {
+      try {
+        final date = DateTime.parse(time);
+        final diff = DateTime.now().difference(date);
+        if (diff.inDays > 0) {
+          timeAgo = '${diff.inDays} hari lalu';
+        } else if (diff.inHours > 0) {
+          timeAgo = '${diff.inHours} jam lalu';
+        } else if (diff.inMinutes > 0) {
+          timeAgo = '${diff.inMinutes} menit lalu';
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
 
     return GestureDetector(
-      onTap: () => context.push('/report/$index'),
+      onTap: () {
+        // context.push('/report/${report.id}');
+      },
       child: Container(
         margin: const EdgeInsets.symmetric(
           horizontal: AppSizes.md,
@@ -554,15 +615,19 @@ class HomeScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.grey[200],
                 borderRadius: BorderRadius.circular(16),
-                image: const DecorationImage(
-                  image: AssetImage('assets/images/road_placeholder.png'),
-                  fit: BoxFit.cover,
-                ),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: const Icon(Icons.image,
-                    color: Colors.grey, size: 30), // Placeholder
+                child: image != null && image.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: image,
+                        fit: BoxFit.cover,
+                        errorWidget: (context, url, error) =>
+                            const Icon(Icons.broken_image, color: Colors.grey),
+                        placeholder: (context, url) =>
+                            const Icon(Icons.image, color: Colors.grey),
+                      )
+                    : const Icon(Icons.image, color: Colors.grey, size: 30),
               ),
             ),
             const SizedBox(width: 16),
@@ -577,7 +642,7 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          report['title'] as String,
+                          title,
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -588,7 +653,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        report['time'] as String,
+                        timeAgo,
                         style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.textSecondary,
@@ -598,7 +663,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    report['desc'] as String,
+                    desc,
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -612,7 +677,7 @@ class HomeScreen extends StatelessWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: report['statusBg'] as Color,
+                      color: statusBg,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -622,29 +687,19 @@ class HomeScreen extends StatelessWidget {
                           width: 6,
                           height: 6,
                           decoration: BoxDecoration(
-                            color: report['statusColor'] as Color,
+                            color: statusColor,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          report['status'] as String,
+                          statusDisplay,
                           style: TextStyle(
-                            color: (report['statusColor'] as Color)
-                                .withOpacity(0.8), // Text slightly darker?
+                            color: statusColor.withOpacity(0.8),
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        if (report['statusColor'] == const Color(0xFF10B981))
-                          // Small fix for text color visibility
-                          Text(
-                            '', // Wrapper to apply color properly if needed
-                            style: TextStyle(
-                              color: Color.lerp(report['statusColor'] as Color,
-                                  Colors.black, 0.2),
-                            ),
-                          ),
                       ],
                     ),
                   ),

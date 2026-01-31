@@ -65,7 +65,14 @@ class AppStrings {
   static const String searchAddress = 'Cari alamat...';
   static const String submitReport = 'Kirim Laporan';
 
-  // Report Status
+  // Report Status Display Names
+  static const String statusPendingDisplayName = 'Menunggu Verifikasi';
+  static const String statusVerifiedDisplayName = 'Terverifikasi';
+  static const String statusProcessDisplayName = 'Perbaikan';
+  static const String statusDoneDisplayName = 'Selesai';
+  static const String statusRejectedDisplayName = 'Ditolak';
+
+  // Legacy/Internal Keys - kept for reference if needed, but display names preferred
   static const String statusSent = 'Dikirim';
   static const String statusProcess = 'Diproses';
   static const String statusComplete = 'Selesai';
@@ -77,7 +84,7 @@ class AppStrings {
   static const String filterAll = 'Semua';
 
   // Achievements
-  static const String achievements = 'Pencapaianku';
+  static const String achievements = 'Pencapaian';
   static const String missions = 'Daftar Misi';
   static const String totalPoints = 'TOTAL POIN';
   static const String achieved = 'Didapat';

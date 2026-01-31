@@ -26,7 +26,7 @@ class AppRoutes {
   static const String createReport = '/report/create';
   static const String reportHistory = '/report/history';
   static const String reportDetail = '/report/:id';
-  static const String leaderboard = '/leaderboard';
+  static const String leaderboard = 'leaderboard';
 }
 
 /// GoRouter configuration
@@ -80,6 +80,10 @@ class AppRouter {
             path: '${AppRoutes.main}/${AppRoutes.profile}',
             builder: (context, state) => const ProfileScreen(),
           ),
+          GoRoute(
+            path: '${AppRoutes.main}/${AppRoutes.leaderboard}',
+            builder: (context, state) => const LeaderboardScreen(),
+          ),
         ],
       ),
 
@@ -102,12 +106,6 @@ class AppRouter {
           final id = state.pathParameters['id'] ?? '';
           return ReportDetailScreen(reportId: id);
         },
-      ),
-
-      // Leaderboard
-      GoRoute(
-        path: AppRoutes.leaderboard,
-        builder: (context, state) => const LeaderboardScreen(),
       ),
     ],
   );

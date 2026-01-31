@@ -84,6 +84,49 @@ class AuthService {
     }
   }
 
+  /// Get user profile
+  Future<UserData> getProfile() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.me);
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'] ?? response.data;
+        return UserData.fromJson(data);
+      } else {
+        throw Exception('Gagal memuat profil');
+      }
+    } on DioException catch (e) {
+      throw Exception(_handleDioError(e));
+    } catch (e) {
+      throw Exception('Terjadi kesalahan: $e');
+    }
+  }
+
+  /// Update avatar
+  Future<String> updateAvatar(String filePath) async {
+    try {
+      final formData = FormData.fromMap({
+        'avatar': await MultipartFile.fromFile(filePath),
+      });
+
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.updateAvatar,
+        data: formData,
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'] ?? response.data;
+        return data['avatar'] ?? data['url'] ?? '';
+      } else {
+        throw Exception('Gagal upload avatar');
+      }
+    } on DioException catch (e) {
+      throw Exception(_handleDioError(e));
+    } catch (e) {
+      throw Exception('Terjadi kesalahan: $e');
+    }
+  }
+
   /// Handle Dio errors
   String _handleDioError(DioException e) {
     switch (e.type) {
